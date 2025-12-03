@@ -1,443 +1,214 @@
-<!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Sistemas de Inventario Completos</title>
+	<title>Sistema de Tickets</title>
 	<style>
-		body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f4f4; }
-		.container { max-width: 900px; margin: 30px auto; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px #0002; }
-		h2 { color: #2c3e50; }
-		.section { margin-bottom: 40px; }
-		input, select, button { margin: 5px 0; padding: 7px; border-radius: 4px; border: 1px solid #ccc; }
-		table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-		th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-		th { background: #2980b9; color: #fff; }
-		.admin-section { background: #eaf6ff; padding: 15px; border-radius: 8px; }
-		.hidden { display: none; }
-		.success { color: green; }
-		.error { color: red; }
+		body {
+			font-family: monospace;
+			background: #f5f5f5;
+			padding: 20px;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+		}
+		.ticket {
+			width: 80mm;
+			background: #fff;
+			padding: 10px;
+			margin: 0 auto;
+			border: 1px solid #ccc;
+			box-shadow: 0 2px 8px #ccc;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+		}
+		.ticket-header {
+			text-align: center;
+			font-weight: bold;
+			margin-bottom: 10px;
+		}
+		.ticket-footer {
+			text-align: center;
+			margin-top: 10px;
+			font-size: 12px;
+		}
+		@media print {
+			body {
+				background: none;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+			}
+			.ticket {
+				box-shadow: none;
+				border: none;
+				margin: 0 auto;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+			}
+			.no-print { display: none; }
+			.ticket, .ticket * {
+				text-align: center !important;
+			}
+			table, th, td {
+				margin-left: auto;
+				margin-right: auto;
+			}
+		}
+		label { display: block; margin-top: 10px; }
+		input, textarea { width: 100%; }
 	</style>
 </head>
 <body>
-<div class="container">
-	<h1>Sistemas de Inventario Completos</h1>
-	<div id="menu-principal">
-		<h2>Selecciona el inventario</h2>
-		<button onclick="mostrarInventario('A')">Inventario Bar</button>
-		<button onclick="mostrarInventario('B')">Inventario Cocina</button>
+	<div class="no-print">
+		<h2>Generar Ticket</h2>
+		<form id="ticketForm">
+			<table id="itemsTable" style="width:100%;margin-bottom:10px;">
+				<thead>
+					<tr>
+						<th>Descripción</th>
+						<th>Cantidad</th>
+						<th>Precio (Q)</th>
+						<th>Subtotal (Q)</th>
+						<th></th>
+					</tr>
+				</thead>
+				<tbody id="itemsBody">
+				</tbody>
+			</table>
+			<button type="button" onclick="addItem()">Agregar Ítem</button>
+			<div style="margin-top:10px;text-align:right;">
+				<b>Total: Q <span id="total">0.00</span></b>
+			</div>
+			<button type="submit" style="margin-top:10px;">Generar Ticket</button>
+		</form>
 	</div>
-	<div class="section" id="inventarioA" style="display:none">
-		<button onclick="volverMenu()">&larr; Volver al menú</button>
-		<h2>Inventario Bar</h2>
-		<div>
-			<h3>Registrar Producto</h3>
-			<input type="text" id="a-nombre" placeholder="Nombre del producto">
-			<input type="number" id="a-cantidad" placeholder="Cantidad inicial">
-			<button onclick="agregarProducto('A')">Agregar</button>
-			<span id="a-add-msg"></span>
-		</div>
-		<div>
-			<h3>Inventario Actual</h3>
-			<button onclick="exportarInventarioCSV('A')">Exportar Inventario a CSV</button>
-			<table id="a-tabla-inventario">
-				<thead>
-					<tr><th>Producto</th><th>Categoría</th><th>Cantidad</th><th>Acciones</th></tr>
-				</thead>
-				<tbody></tbody>
-			</table>
-		</div>
-		<div>
-			<h3>Resumen de Ventas del Día</h3>
-			<button onclick="exportarVentasDiaCSV('A')">Exportar Ventas Día a CSV</button>
-			<table id="a-tabla-ventas-dia">
-				<thead>
-					<tr><th>Producto</th><th>Cantidad Vendida</th><th>Acciones</th></tr>
-				</thead>
-				<tbody></tbody>
-			</table>
-			<div id="a-total-dia"></div>
-		</div>
-		<div>
-			<h3>Historial de Movimientos</h3>
-			<button onclick="exportarHistorialCSV('A')">Exportar Historial a CSV</button>
-			<table id="a-tabla-historial">
-				<thead>
-					<tr><th>Fecha</th><th>Tipo</th><th>Producto</th><th>Categoría</th><th>Cantidad</th><th>Usuario</th></tr>
-				</thead>
-				<tbody></tbody>
-			</table>
-		</div>
-		<div class="admin-section">
-			<h3>Corte Semanal (Admin)</h3>
-			<input type="password" id="a-admin-pass" placeholder="Contraseña admin">
-			<button onclick="mostrarCorte('A')">Ver Corte</button>
-			<div id="a-corte-semanal" class="hidden"></div>
-		</div>
-		<div>
-			<h3>Conteo y Corroboración de Inventario</h3>
-			<button onclick="corroborarInventario('A')">Corroborar Inventario</button>
-			<div id="a-corroboracion"></div>
-		</div>
+	<div id="ticket" class="ticket" style="display:none;"></div>
+	<div class="no-print" style="text-align:center;margin-top:20px;">
+		<button onclick="window.print()">Imprimir Ticket</button>
+		<!-- Botón para reiniciar el conteo de tickets (requiere contraseña) -->
+		<button onclick="requestReset()" style="margin-left:8px;">Reiniciar Conteo</button>
 	</div>
-	<hr>
-	<!-- Aquí irá el Inventario B -->
-	<div class="section" id="inventarioB" style="display:none">
-		<button onclick="volverMenu()">&larr; Volver al menú</button>
-		<h2>Inventario Cocina</h2>
-		<div>
-			<h3>Registrar Producto</h3>
-			<input type="text" id="b-nombre" placeholder="Nombre del producto">
-			<input type="number" id="b-cantidad" placeholder="Cantidad inicial">
-			<button onclick="agregarProducto('B')">Agregar</button>
-			<span id="b-add-msg"></span>
-		</div>
-		<div>
-			<h3>Inventario Actual</h3>
-			<button onclick="exportarInventarioCSV('B')">Exportar Inventario a CSV</button>
-			<table id="b-tabla-inventario">
-				<thead>
-					<tr><th>Producto</th><th>Categoría</th><th>Cantidad</th><th>Acciones</th></tr>
-				</thead>
-				<tbody></tbody>
-			</table>
-		</div>
-		<div>
-			<h3>Resumen de Ventas del Día</h3>
-			<button onclick="exportarVentasDiaCSV('B')">Exportar Ventas Día a CSV</button>
-			<table id="b-tabla-ventas-dia">
-				<thead>
-					<tr><th>Producto</th><th>Cantidad Vendida</th><th>Acciones</th></tr>
-				</thead>
-				<tbody></tbody>
-			</table>
-			<div id="b-total-dia"></div>
-		</div>
-		<div>
-			<h3>Historial de Movimientos</h3>
-			<button onclick="exportarHistorialCSV('B')">Exportar Historial a CSV</button>
-			<table id="b-tabla-historial">
-				<thead>
-					<tr><th>Fecha</th><th>Tipo</th><th>Producto</th><th>Categoría</th><th>Cantidad</th><th>Usuario</th></tr>
-				</thead>
-				<tbody></tbody>
-			</table>
-		</div>
-		<div class="admin-section">
-			<h3>Corte Semanal (Admin)</h3>
-			<input type="password" id="b-admin-pass" placeholder="Contraseña admin">
-			<button onclick="mostrarCorte('B')">Ver Corte</button>
-			<div id="b-corte-semanal" class="hidden"></div>
-		</div>
-		<div>
-			<h3>Conteo y Corroboración de Inventario</h3>
-			<button onclick="corroborarInventario('B')">Corroborar Inventario</button>
-			<div id="b-corroboracion"></div>
-		</div>
-	</div>
-</div>
-<script>
-// Configuración de contraseñas admin (puedes cambiar estas)
-const adminPasswords = { A: 'adminA123', B: 'adminB123' };
+	<script>
+		// Inicializar número de ticket si no existe
+		if (!localStorage.getItem('ticketNumber')) {
+			localStorage.setItem('ticketNumber', '1');
+		}
 
-// Utilidades de LocalStorage y CSV
-function getData(key) {
-	return JSON.parse(localStorage.getItem(key) || '[]');
-}
-function setData(key, data) {
-	localStorage.setItem(key, JSON.stringify(data));
-}
-function getToday() {
-	const d = new Date();
-	// Obtener fecha local en formato YYYY-MM-DD
-	const year = d.getFullYear();
-	const month = String(d.getMonth() + 1).padStart(2, '0');
-	const day = String(d.getDate()).padStart(2, '0');
-	return `${year}-${month}-${day}`;
-}
-function getNow() {
-	const d = new Date();
-	// Obtener fecha y hora local en formato YYYY-MM-DD HH:MM:SS
-	const year = d.getFullYear();
-	const month = String(d.getMonth() + 1).padStart(2, '0');
-	const day = String(d.getDate()).padStart(2, '0');
-	const hours = String(d.getHours()).padStart(2, '0');
-	const minutes = String(d.getMinutes()).padStart(2, '0');
-	const seconds = String(d.getSeconds()).padStart(2, '0');
-	return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-}
-function getWeek() {
-	const d = new Date();
-	const year = d.getFullYear();
-	const onejan = new Date(d.getFullYear(),0,1);
-	const week = Math.ceil((((d - onejan) / 86400000) + onejan.getDay()+1)/7);
-	return `${year}-W${week}`;
-}
-function toCSV(rows) {
-	return rows.map(r => r.map(x => {
-		let s = String(x).replace(/"/g, '""');
-		if (s.search(/[",\n]/) >= 0) s = '"' + s + '"';
-		return s;
-	}).join(',')).join('\r\n');
-}
-function downloadCSV(filename, rows) {
-	const csv = toCSV(rows);
-	const blob = new Blob([csv], {type: 'text/csv'});
-	const url = URL.createObjectURL(blob);
-	const a = document.createElement('a');
-	a.href = url; a.download = filename; a.click();
-	setTimeout(()=>URL.revokeObjectURL(url), 1000);
-}
+		// Contraseña para permitir reiniciar el contador (cambiar aquí si se desea)
+		const RESET_PASSWORD = '45985365';
 
-// Inventario y ventas por sistema
-function getKeys(sistema) {
-	return {
-		inventario: `inv_${sistema}`,
-		ventas: `ventas_${sistema}`,
-		corte: `corte_${sistema}`,
-		historial: `historial_${sistema}`
-	};
-}
+		function getNextTicketNumber() {
+			let num = parseInt(localStorage.getItem('ticketNumber') || '1', 10);
+			localStorage.setItem('ticketNumber', (num + 1).toString());
+			return num;
+		}
 
-function agregarProducto(sistema) {
-	const nombre = document.getElementById(`${sistema.toLowerCase()}-nombre`).value.trim();
-	const cantidad = parseInt(document.getElementById(`${sistema.toLowerCase()}-cantidad`).value);
-	let categoria = prompt('Categoría del producto (ej: Bebidas, Alimentos, etc):', '');
-	if (!categoria) categoria = 'Sin categoría';
-	const msg = document.getElementById(`${sistema.toLowerCase()}-add-msg`);
-	if (!nombre || isNaN(cantidad) || cantidad <= 0) {
-		msg.textContent = 'Datos inválidos'; msg.className = 'error'; return;
-	}
-	let inventario = getData(getKeys(sistema).inventario);
-	let idx = inventario.findIndex(p => p.nombre.toLowerCase() === nombre.toLowerCase());
-	if (idx >= 0) {
-		if (!confirm('El producto ya existe. ¿Deseas actualizarlo y sumar la cantidad?')) return;
-		inventario[idx].cantidad += cantidad;
-		inventario[idx].categoria = categoria;
-		registrarHistorial(sistema, 'Actualización', nombre, categoria, cantidad);
-	} else {
-		inventario.push({ nombre, cantidad, categoria });
-		registrarHistorial(sistema, 'Alta', nombre, categoria, cantidad);
-	}
-	setData(getKeys(sistema).inventario, inventario);
-	msg.textContent = 'Producto agregado/actualizado'; msg.className = 'success';
-	document.getElementById(`${sistema.toLowerCase()}-nombre`).value = '';
-	document.getElementById(`${sistema.toLowerCase()}-cantidad`).value = '';
-	renderInventario(sistema);
-	renderHistorial(sistema);
-}
+		function addItem(desc = '', cant = 1, precio = 0) {
+			const tbody = document.getElementById('itemsBody');
+			const row = document.createElement('tr');
+			row.innerHTML = `
+				<td><input type="text" class="desc" value="${desc}" required></td>
+				<td><input type="number" class="cant" value="${cant}" min="1" style="width:60px;" required></td>
+				<td><input type="number" class="precio" value="${precio}" min="0" step="0.01" style="width:80px;" required></td>
+				<td class="subtotal">0.00</td>
+				<td><button type="button" onclick="this.parentNode.parentNode.remove();calcTotal();">Quitar</button></td>
+			`;
+			tbody.appendChild(row);
+			row.querySelectorAll('input').forEach(input => {
+				input.addEventListener('input', calcTotal);
+			});
+			calcTotal();
+		}
 
-function venderProducto(sistema, nombre) {
-	const cantidad = parseInt(prompt('Cantidad a vender de ' + nombre + ':'));
-	if (isNaN(cantidad) || cantidad <= 0) return;
-	let inventario = getData(getKeys(sistema).inventario);
-	let idx = inventario.findIndex(p => p.nombre === nombre);
-	if (idx < 0 || inventario[idx].cantidad < cantidad) {
-		alert('No hay suficiente inventario'); return;
-	}
-	inventario[idx].cantidad -= cantidad;
-	setData(getKeys(sistema).inventario, inventario);
-	// Registrar venta
-	let ventas = getData(getKeys(sistema).ventas);
-	const today = getToday();
-	ventas.push({ nombre, cantidad, fecha: today, categoria: inventario[idx].categoria });
-	setData(getKeys(sistema).ventas, ventas);
-	registrarHistorial(sistema, 'Venta', nombre, inventario[idx].categoria, cantidad);
-	renderInventario(sistema);
-	renderVentasDia(sistema);
-	renderHistorial(sistema);
-}
+		function calcTotal() {
+			let total = 0;
+			document.querySelectorAll('#itemsBody tr').forEach(row => {
+				const cant = parseFloat(row.querySelector('.cant').value) || 0;
+				const precio = parseFloat(row.querySelector('.precio').value) || 0;
+				const subtotal = cant * precio;
+				row.querySelector('.subtotal').textContent = subtotal.toFixed(2);
+				total += subtotal;
+			});
+			document.getElementById('total').textContent = total.toFixed(2);
+			return total;
+		}
 
-function renderInventario(sistema) {
-	const inventario = getData(getKeys(sistema).inventario);
-	const tbody = document.querySelector(`#${sistema.toLowerCase()}-tabla-inventario tbody`);
-	tbody.innerHTML = '';
-	inventario.forEach((p, i) => {
-		tbody.innerHTML += `<tr><td>${p.nombre}</td><td>${p.categoria||''}</td><td>${p.cantidad}</td><td><button onclick=\"venderProducto('${sistema}','${p.nombre}')\">Vender</button> <button onclick=\"editarProducto('${sistema}',${i})\">Editar</button> <button onclick=\"eliminarProducto('${sistema}',${i})\">Eliminar</button></td></tr>`;
-	});
-}
+		// Agregar un ítem por defecto al cargar
+		window.onload = function() {
+			if(document.getElementById('itemsBody').children.length === 0) addItem();
+		};
 
-function renderVentasDia(sistema) {
-	const ventas = getData(getKeys(sistema).ventas).filter(v => v.fecha === getToday());
-	const resumen = {};
-	ventas.forEach((v, idx) => {
-		if (!resumen[v.nombre]) resumen[v.nombre] = { cantidad: 0, idxs: [] };
-		resumen[v.nombre].cantidad += v.cantidad;
-		resumen[v.nombre].idxs.push(idx);
-	});
-	const tbody = document.querySelector(`#${sistema.toLowerCase()}-tabla-ventas-dia tbody`);
-	tbody.innerHTML = '';
-	let totalDia = 0;
-	Object.keys(resumen).forEach(nombre => {
-		tbody.innerHTML += `<tr><td>${nombre}</td><td>${resumen[nombre].cantidad}</td><td><button onclick=\"editarVenta('${sistema}','${nombre}')\">Editar</button> <button onclick=\"eliminarVenta('${sistema}','${nombre}')\">Eliminar</button></td></tr>`;
-		totalDia += resumen[nombre].cantidad;
-	});
-	document.getElementById(`${sistema.toLowerCase()}-total-dia`).textContent = 'Total del día: ' + totalDia;
-}
-// Historial de movimientos
-function registrarHistorial(sistema, tipo, nombre, categoria, cantidad, usuario) {
-	let historial = getData(getKeys(sistema).historial);
-	historial.push({ fecha: getNow(), tipo, nombre, categoria, cantidad, usuario: usuario||'admin' });
-	setData(getKeys(sistema).historial, historial);
-}
+		document.getElementById('ticketForm').onsubmit = function(e) {
+			e.preventDefault();
+			const items = [];
+			document.querySelectorAll('#itemsBody tr').forEach(row => {
+				const desc = row.querySelector('.desc').value;
+				const cant = parseFloat(row.querySelector('.cant').value) || 0;
+				const precio = parseFloat(row.querySelector('.precio').value) || 0;
+				if(desc && cant > 0 && precio >= 0) {
+					items.push({desc, cant, precio, subtotal: cant*precio});
+				}
+			});
+			if(items.length === 0) {
+				alert('Agrega al menos un ítem.');
+				return;
+			}
+			const total = calcTotal().toFixed(2);
+			const ticketNumber = getNextTicketNumber();
+			const now = new Date();
+			const fecha = now.toLocaleDateString();
+			const hora = now.toLocaleTimeString();
 
-function renderHistorial(sistema) {
-	const historial = getData(getKeys(sistema).historial);
-	const tbody = document.querySelector(`#${sistema.toLowerCase()}-tabla-historial tbody`);
-	tbody.innerHTML = '';
-	historial.slice(-100).reverse().forEach(h => {
-		tbody.innerHTML += `<tr><td>${h.fecha}</td><td>${h.tipo}</td><td>${h.nombre}</td><td>${h.categoria||''}</td><td>${h.cantidad}</td><td>${h.usuario||''}</td></tr>`;
-	});
-}
+			// Guardar último ticket en localStorage (opcional)
+			localStorage.setItem('lastTicket', JSON.stringify({ticketNumber, fecha, hora, items, total}));
 
-// Exportar a CSV
-function exportarInventarioCSV(sistema) {
-	var inventario = getData(getKeys(sistema).inventario);
-	var rows = [['Producto','Categoría','Cantidad']].concat(inventario.map(p=>[p.nombre,p.categoria||'',p.cantidad]));
-	downloadCSV(`inventario_${sistema}.csv`, rows);
-}
-function exportarVentasDiaCSV(sistema) {
-	var ventas = getData(getKeys(sistema).ventas).filter(v=>v.fecha===getToday());
-	var rows = [['Producto','Categoría','Cantidad','Fecha']].concat(ventas.map(v=>[v.nombre,v.categoria||'',v.cantidad,v.fecha]));
-	downloadCSV(`ventas_dia_${sistema}.csv`, rows);
-}
-function exportarHistorialCSV(sistema) {
-	var historial = getData(getKeys(sistema).historial);
-	var rows = [['Fecha','Tipo','Producto','Categoría','Cantidad','Usuario']].concat(historial.map(h=>[h.fecha,h.tipo,h.nombre,h.categoria||'',h.cantidad,h.usuario||'']));
-	downloadCSV(`historial_${sistema}.csv`, rows);
-}
+			// Mostrar ticket
+			let itemsHtml = '';
+			items.forEach(it => {
+				itemsHtml += `<tr><td>${it.desc}</td><td style='text-align:right;'>${it.cant}</td><td style='text-align:right;'>Q${it.precio.toFixed(2)}</td><td style='text-align:right;'>Q${it.subtotal.toFixed(2)}</td></tr>`;
+			});
+			document.getElementById('ticket').style.display = 'block';
+			document.getElementById('ticket').innerHTML = `
+				<div class='ticket-header'>
+				</div>
+				<div style='text-align:center;font-size:13px;'>
+					¡Bienvenido!<br>
+					Esperamos que disfrute su estancia y nuestros servicios.<br>
+				</div>
+				<div style='text-align:center;margin:8px 0;'>TICKET #${ticketNumber}</div>
+				<div>Fecha: ${fecha}</div>
+				<div>Hora: ${hora}</div>
+				<hr>
+				<table style='width:100%;font-size:13px;'>
+					<thead><tr><th>Descripción</th><th style='text-align:right;'>Cant</th><th style='text-align:right;'>P.Unit</th><th style='text-align:right;'>Subt</th></tr></thead>
+					<tbody>${itemsHtml}</tbody>
+				</table>
+				<hr>
+				<div style='text-align:right;font-size:16px;'><b>Total: Q${total}</b></div>
+				<hr>
+				<div class='ticket-footer'>¡Gracias por preferirnos!<br>Vuelva pronto.</div>
+			`;
+		};
 
-// Editar y eliminar productos solo con contraseña admin
-function editarProducto(sistema, idx) {
-	const pass = prompt('Contraseña admin para editar:');
-	if (pass !== adminPasswords[sistema]) {
-		alert('Contraseña incorrecta'); return;
-	}
-	let inventario = getData(getKeys(sistema).inventario);
-	let p = inventario[idx];
-	let nombre = prompt('Nuevo nombre:', p.nombre) || p.nombre;
-	let categoria = prompt('Nueva categoría:', p.categoria) || p.categoria;
-	let cantidad = parseInt(prompt('Nueva cantidad:', p.cantidad));
-	if (!nombre || isNaN(cantidad) || cantidad < 0) return alert('Datos inválidos');
-	registrarHistorial(sistema, 'Edición', nombre, categoria, cantidad);
-	inventario[idx] = { nombre, categoria, cantidad };
-	setData(getKeys(sistema).inventario, inventario);
-	renderInventario(sistema);
-	renderHistorial(sistema);
-}
-function eliminarProducto(sistema, idx) {
-	const pass = prompt('Contraseña admin para eliminar:');
-	if (pass !== adminPasswords[sistema]) {
-		alert('Contraseña incorrecta'); return;
-	}
-	if (!confirm('¿Seguro que deseas eliminar este producto?')) return;
-	let inventario = getData(getKeys(sistema).inventario);
-	registrarHistorial(sistema, 'Eliminación', inventario[idx].nombre, inventario[idx].categoria, inventario[idx].cantidad);
-	inventario.splice(idx,1);
-	setData(getKeys(sistema).inventario, inventario);
-	renderInventario(sistema);
-	renderHistorial(sistema);
-}
-function editarVenta(sistema, nombre) {
-	let ventas = getData(getKeys(sistema).ventas);
-	let idx = ventas.findIndex(v => v.nombre === nombre && v.fecha === getToday());
-	if (idx < 0) return;
-	let cantidad = parseInt(prompt('Nueva cantidad vendida:', ventas[idx].cantidad));
-	if (isNaN(cantidad) || cantidad < 0) return alert('Datos inválidos');
-	registrarHistorial(sistema, 'Edición Venta', nombre, ventas[idx].categoria, cantidad);
-	ventas[idx].cantidad = cantidad;
-	setData(getKeys(sistema).ventas, ventas);
-	renderVentasDia(sistema);
-	renderHistorial(sistema);
-}
-function eliminarVenta(sistema, nombre) {
-	if (!confirm('¿Seguro que deseas eliminar esta venta?')) return;
-	let ventas = getData(getKeys(sistema).ventas);
-	let idx = ventas.findIndex(v => v.nombre === nombre && v.fecha === getToday());
-	if (idx < 0) return;
-	registrarHistorial(sistema, 'Eliminación Venta', nombre, ventas[idx].categoria, ventas[idx].cantidad);
-	ventas.splice(idx,1);
-	setData(getKeys(sistema).ventas, ventas);
-	renderVentasDia(sistema);
-	renderHistorial(sistema);
-}
-// Menú para elegir inventario
-function mostrarInventario(sistema) {
-	document.getElementById('menu-principal').style.display = 'none';
-	document.getElementById('inventarioA').style.display = sistema === 'A' ? '' : 'none';
-	document.getElementById('inventarioB').style.display = sistema === 'B' ? '' : 'none';
-}
-function volverMenu() {
-	document.getElementById('menu-principal').style.display = '';
-	document.getElementById('inventarioA').style.display = 'none';
-	document.getElementById('inventarioB').style.display = 'none';
-}
-
-function mostrarCorte(sistema) {
-	const pass = document.getElementById(`${sistema.toLowerCase()}-admin-pass`).value;
-	if (pass !== adminPasswords[sistema]) {
-		alert('Contraseña incorrecta'); return;
-	}
-	// Ventas de la semana agrupadas por día
-	const ventas = getData(getKeys(sistema).ventas).filter(v => getWeekFromDate(v.fecha) === getWeek());
-	const ventasPorDia = {};
-	ventas.forEach(v => {
-		if (!ventasPorDia[v.fecha]) ventasPorDia[v.fecha] = [];
-		ventasPorDia[v.fecha].push(v);
-	});
-	let html = `<h4>Ventas de la semana actual (día por día)</h4>`;
-	Object.keys(ventasPorDia).sort().forEach(dia => {
-		html += `<b>${dia}</b><table><thead><tr><th>Producto</th><th>Cantidad</th></tr></thead><tbody>`;
-		ventasPorDia[dia].forEach(v => {
-			html += `<tr><td>${v.nombre}</td><td>${v.cantidad}</td></tr>`;
-		});
-		html += `</tbody></table>`;
-	});
-	// Historial de ediciones y eliminaciones
-	const historial = getData(getKeys(sistema).historial).filter(h => {
-		return getWeekFromDate(h.fecha && h.fecha.substr(0,10)) === getWeek() && (h.tipo === 'Edición' || h.tipo === 'Eliminación' || h.tipo === 'Actualización');
-	});
-	if (historial.length > 0) {
-		html += `<h4>Ediciones y cambios manuales de la semana</h4><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Producto</th><th>Categoría</th><th>Cantidad</th><th>Usuario</th></tr></thead><tbody>`;
-		historial.forEach(h => {
-			html += `<tr><td>${h.fecha}</td><td>${h.tipo}</td><td>${h.nombre}</td><td>${h.categoria||''}</td><td>${h.cantidad}</td><td>${h.usuario||''}</td></tr>`;
-		});
-		html += `</tbody></table>`;
-	}
-	document.getElementById(`${sistema.toLowerCase()}-corte-semanal`).innerHTML = html;
-	document.getElementById(`${sistema.toLowerCase()}-corte-semanal`).classList.remove('hidden');
-}
-
-function getWeekFromDate(dateStr) {
-	const d = new Date(dateStr);
-	const year = d.getFullYear();
-	const onejan = new Date(d.getFullYear(),0,1);
-	const week = Math.ceil((((d - onejan) / 86400000) + onejan.getDay()+1)/7);
-	return `${year}-W${week}`;
-}
-
-function corroborarInventario(sistema) {
-	const inventario = getData(getKeys(sistema).inventario);
-	let html = '<h4>Conteo actual de inventario</h4><table><thead><tr><th>Producto</th><th>Cantidad</th></tr></thead><tbody>';
-	inventario.forEach(p => {
-		html += `<tr><td>${p.nombre}</td><td>${p.cantidad}</td></tr>`;
-	});
-	html += '</tbody></table>';
-	document.getElementById(`${sistema.toLowerCase()}-corroboracion`).innerHTML = html;
-}
-
-// Inicializar tablas al cargar
-window.onload = function() {
-	renderInventario('A');
-	renderVentasDia('A');
-	renderHistorial('A');
-	renderInventario('B');
-	renderVentasDia('B');
-	renderHistorial('B');
-	document.getElementById('menu-principal').style.display = '';
-	document.getElementById('inventarioA').style.display = 'none';
-	document.getElementById('inventarioB').style.display = 'none';
-}
-</script>
+		// Solicita contraseña y reinicia el contador si es correcta
+		function requestReset() {
+			const pwd = prompt('Ingrese la contraseña para reiniciar el conteo de tickets:');
+			if (pwd === null) return; // usuario canceló
+			if (pwd === RESET_PASSWORD) {
+				if (confirm('¿Confirmar reinicio del contador de tickets a 1?')) {
+					localStorage.setItem('ticketNumber', '1');
+					alert('Contador reiniciado a 1');
+					// Opcional: ocultar ticket actual y limpiar lastTicket
+					localStorage.removeItem('lastTicket');
+					document.getElementById('ticket').style.display = 'none';
+				}
+			} else {
+				alert('Contraseña incorrecta');
+			}
+		}
+	</script>
 </body>
 </html>
